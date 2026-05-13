@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarketCapture | Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg:        #f4f6f8;
+            --surface:   #ffffff;
+            --border:    #e9ecef;
+            --border-2:  #d1d7de;
+            --text:      #212529;
+            --muted:     #6c757d;
+
+            --green:     #00b87b;
+            --red:       #d93744;
+            --blue:      #3E7BCC;
+            --blue-dim:  rgba(62, 123, 204, 0.15);
+
+            --mono: 'Space Mono', monospace;
+            --sans: 'DM Sans', sans-serif;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--sans); font-size: 14px; min-height: 100vh;
+        }
+
+        .layout { max-width: 1100px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+
+        /* Top nav */
+        .topbar {
+            display: flex; align-items: center; gap: 1rem;
+            margin-bottom: 2.5rem; padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .logo { display: flex; align-items: center; gap: 10px; }
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--blue);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .logo-icon svg { width: 18px; height: 18px; stroke: white; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .logo-name {
+            font-family: var(--sans);
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+        }
+        .logo-tag { font-family: var(--sans); font-size: 9px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
+        .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+
+        .btn-visit {
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            padding: 9px 12px; background: transparent;
+            border: 1px solid var(--border-2); border-radius: 7px;
+            color: var(--muted); font-family: var(--mono); font-size: 10px;
+            letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none;
+            transition: all 0.2s;
+        }
+        .btn-visit:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-dim); }
+
+        .section-label {
+            font-family: var(--mono); font-size: 10px; color: var(--muted);
+            letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 10px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+        .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 2rem; }
+
+        .suggestion-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 0; border-bottom: 1px solid var(--border);
+        }
+        .suggestion-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .sug-name { font-weight: 500; font-size: 13px; margin-bottom: 2px; }
+        .sug-reason { font-size: 11px; color: var(--muted); }
+        
+        .trend-icon.up { color: var(--red); }
+        .trend-icon.down { color: var(--green); }
+        .trend-icon.neu { color: var(--muted); }
+
+        @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+<div class="layout">
+    <div class="topbar">
+        <div class="logo">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+            </div>
+            <div>
+                <div class="logo-name">MarketCapture</div>
+                <div class="logo-tag">Insights & History</div>
+            </div>
+        </div>
+        <div class="topbar-right">
+            <a href="{% url 'home' %}" class="btn-visit" style="width: auto;">← Back to Scanner</a>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <div>
+            <div class="section-label">Recent Search Volume (Results Found)</div>
+            <div class="card">
+                <canvas id="historyChart" height="150"></canvas>
+            </div>
+        </div>
+        <div>
+            <div class="section-label">Smart Suggestions</div>
+            <div class="card">
+                {% for sug in suggestions %}
+                <div class="suggestion-item">
+                    <div>
+                        <div class="sug-name">{{ sug.name }}</div>
+                        <div class="sug-reason">{{ sug.reason }}</div>
+                    </div>
+                    <div class="trend-icon {% if sug.trend == '▼' %}down{% elif sug.trend == '▲' %}up{% else %}neu{% endif %}">{{ sug.trend }}</div>
+                </div>
+                {% endfor %}
+                <a href="{% url 'home' %}" class="btn-visit" style="margin-top: 15px;">Discover more</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    new Chart(document.getElementById('historyChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: {{ chart_labels|safe }},
+            datasets: [{
+                label: 'Products Found',
+                data: {{ chart_values|safe }},
+                backgroundColor: 'rgba(62, 123, 204, 0.2)',
+                borderColor: '#3E7BCC',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#6c757d', font: { family: 'Space Mono' } } }, x: { grid: { display: false }, ticks: { color: '#6c757d', font: { family: 'Space Mono' } } } },
+            plugins: { legend: { display: false } }
+        }
+    });
+</script>
+</body>
+</html>

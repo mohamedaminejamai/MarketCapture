@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarketCapture | Price Intelligence</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg:        #f4f6f8; /* Light neutral background */
+            --surface:   #ffffff; /* Card backgrounds */
+            --surface-2: #f0f2f5; /* Table headers, etc. */
+            --border:    #e9ecef; /* Borders */
+            --border-2:  #d1d7de; /* Stronger borders */
+            --text:      #212529; /* Main text color */
+            --muted:     #6c757d; /* Muted text */
+            --faint:     #e9ecef; /* Faint elements */
+
+            --green:     #00b87b;
+            --green-dim: rgba(0, 184, 123, 0.15);
+            --amber:     #f0a500;
+            --amber-dim: rgba(240, 165, 0, 0.15);
+            --red:       #d93744;
+            --red-dim:   rgba(217, 55, 68, 0.15);
+            --blue:      #3E7BCC;
+            --blue-dim:  rgba(62, 123, 204, 0.15);
+
+            --mono: 'Space Mono', monospace;
+            --sans: 'DM Sans', sans-serif;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--sans);
+            font-size: 14px;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--surface-2); }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+
+        /* ── Layout ── */
+        .layout {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2.5rem 1.5rem 4rem;
+        }
+
+        /* ── Top nav ── */
+        .topbar {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--blue);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-icon svg { width: 18px; height: 18px; stroke: white; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+        .logo-name {
+            font-family: var(--sans);
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            color: var(--text);
+        }
+
+        .logo-tag {
+            font-family: var(--sans);
+            font-size: 9px;
+            color: var(--muted);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            display: block;
+            line-height: 1;
+            margin-top: 1px;
+        }
+
+        .topbar-right {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .live-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--muted);
+            letter-spacing: 0.08em;
+            background: var(--green-dim);
+            border: 1px solid rgba(0,214,143,0.2);
+            padding: 4px 10px;
+            border-radius: 99px;
+        }
+
+        .live-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--green); /* Keep green for live status */
+            animation: blink 2s ease-in-out infinite;
+        }
+
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+
+        .topbar-meta {
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--muted);
+            letter-spacing: 0.06em;
+        }
+
+        /* ── Search ── */
+        .search-wrap {
+            margin-bottom: 2rem;
+        }
+
+        .search-label {
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--muted);
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .search-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .search-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .search-field {
+            flex: 1;
+            height: 44px;
+            padding: 0 16px;
+            background: var(--surface);
+            border: 1px solid var(--border-2);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: var(--mono);
+            font-size: 12px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .search-field:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px var(--blue-dim);
+        }
+
+        .search-field::placeholder { color: var(--muted); }
+
+        .search-select {
+            height: 44px;
+            padding: 0 12px;
+            background: var(--surface);
+            border: 1px solid var(--border-2);
+            border-radius: 8px;
+            color: var(--muted);
+            font-family: var(--mono);
+            font-size: 11px;
+            outline: none;
+            cursor: pointer;
+            min-width: 120px;
+        }
+
+        .search-select:focus { border-color: var(--blue); }
+
+        .btn-analyze {
+            height: 44px;
+            padding: 0 22px;
+            background: var(--blue);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-family: var(--mono);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+
+        .btn-analyze:hover { opacity: 0.88; transform: translateY(-1px); }
+        .btn-analyze:active { transform: translateY(0); }
+
+        /* ── Alert bar ── */
+        .alert-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 16px;
+            background: var(--blue-dim);
+            border: 1px solid var(--blue);
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            font-size: 13px;
+            color: var(--blue);
+            animation: slideIn 0.4s ease;
+        }
+
+        @keyframes slideIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:none} }
+
+        .alert-icon { font-size: 15px; flex-shrink: 0; }
+        .alert-bar strong { color: var(--text); font-weight: 500; }
+        .alert-bar .alert-close { margin-left: auto; cursor: pointer; opacity: 0.6; font-size: 18px; background: none; border: none; color: inherit; line-height: 1; }
+        .alert-bar .alert-close:hover { opacity: 1; }
+
+        /* ── Stats row ── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+        }
+
+        .stat-card.s-blue::before  { background: var(--blue); }
+        .stat-card.s-green::before { background: var(--green); }
+        .stat-card.s-amber::before { background: var(--amber); }
+        .stat-card.s-muted::before { background: var(--border-2); }
+
+        .stat-label {
+            font-family: var(--mono);
+            font-size: 9px;
+            color: var(--muted);
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .stat-val {
+            font-family: var(--mono);
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .stat-change {
+            font-family: var(--mono);
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .stat-change.up   { color: var(--green); }
+        .stat-change.down { color: var(--red); }
+        .stat-change.neu  { color: var(--muted); }
+
+        /* ── Hero cards ── */
+        .hero-section-label {
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--muted);
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .hero-section-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .hero-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: border-color 0.2s, transform 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .hero-card:hover {
+            transform: translateY(-3px);
+            border-color: var(--border-2);
+        }
+
+        .hero-card-top {
+            height: 4px;
+        }
+
+        .hc-green { background: var(--green); }
+        .hc-amber { background: var(--amber); }
+        .hc-red   { background: var(--red); }
+
+        .hero-img-area {
+            height: 120px;
+            background: var(--surface-2);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .hero-img-area img {
+            max-height: 90px;
+            max-width: 90%;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4));
+        }
+
+        .hero-img-placeholder {
+            opacity: 0.15;
+        }
+
+        .hero-img-placeholder svg { width: 48px; height: 48px; stroke: var(--text); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+        .hero-body {
+            padding: 14px 16px 16px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .hero-badge {
+            font-family: var(--mono);
+            font-size: 9px;
+            letter-spacing: 0.1em;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 3px 9px;
+            border-radius: 99px;
+            display: inline-block;
+            margin-bottom: 10px;
+            align-self: flex-start;
+        }
+
+        .badge-green { background: var(--green-dim); color: var(--green); border: 1px solid rgba(0,214,143,0.2); }
+        .badge-amber { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(240,165,0,0.2); }
+        .badge-red   { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(255,79,94,0.2); }
+
+        .hero-name {
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .hero-price {
+            font-family: var(--mono);
+            font-size: 26px;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 10px;
+        }
+
+        .price-green { color: var(--green); }
+        .price-amber { color: var(--amber); }
+        .price-red   { color: var(--red); }
+
+        .hero-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--muted);
+            margin-bottom: 14px;
+        }
+
+        .hero-stars { color: var(--amber); letter-spacing: -2px; }
+
+        .btn-visit {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+            padding: 9px;
+            background: transparent;
+            border: 1px solid var(--border-2);
+            border-radius: 7px;
+            color: var(--muted);
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: auto;
+        }
+
+        .btn-visit:hover {
+            border-color: var(--blue);
+            color: var(--blue);
+            background: var(--blue-dim);
+        }
+
+        .btn-visit svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+        /* ── Table ── */
+        .table-section { margin-bottom: 2rem; }
+
+        .table-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .table-title {
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--muted);
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .filter-pills {
+            display: flex;
+            gap: 6px;
+            margin-left: auto;
+        }
+
+        .filter-pill {
+            font-family: var(--mono);
+            font-size: 10px;
+            padding: 4px 12px;
+            border-radius: 99px;
+            border: 1px solid var(--border-2);
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+            letter-spacing: 0.06em;
+            transition: all 0.15s;
+        }
+
+        .filter-pill:hover { border-color: var(--blue); color: var(--blue); }
+        .filter-pill.active { background: var(--blue-dim); border-color: var(--blue); color: var(--blue); }
+
+        .table-wrap {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead th {
+            padding: 12px 16px;
+            font-family: var(--mono);
+            font-size: 9px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--muted);
+            background: var(--surface-2);
+            border-bottom: 1px solid var(--border);
+            font-weight: 400;
+            white-space: nowrap;
+        }
+
+        thead th:first-child { padding-left: 20px; }
+        thead th:last-child  { padding-right: 20px; text-align: right; }
+
+        tbody tr {
+            border-bottom: 1px solid var(--border);
+            transition: background 0.15s;
+        }
+
+        tbody tr:last-child { border-bottom: none; }
+        tbody tr:hover { background: var(--surface-2); }
+
+        tbody td {
+            padding: 14px 16px;
+            vertical-align: middle;
+            color: var(--text);
+        }
+
+        tbody td:first-child { padding-left: 20px; }
+        tbody td:last-child  { padding-right: 20px; text-align: right; }
+
+        .product-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .product-thumb {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .product-thumb img { width: 28px; height: 28px; object-fit: contain; }
+        .product-thumb svg { width: 16px; height: 16px; stroke: var(--muted); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; opacity: 0.5; }
+
+        .product-info-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 320px;
+        }
+
+        .product-info-src {
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--muted);
+            margin-top: 1px;
+        }
+
+        .stars-cell { color: var(--amber); font-size: 11px; letter-spacing: -2px; white-space: nowrap; }
+        .stars-num  { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: 4px; }
+
+        .price-col {
+            font-family: var(--mono);
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--blue);
+        }
+
+        .trend-up { font-family: var(--mono); font-size: 10px; color: var(--red); white-space: nowrap; }
+        .trend-dn { font-family: var(--mono); font-size: 10px; color: var(--green); white-space: nowrap; }
+        .trend-neutral { font-family: var(--mono); font-size: 10px; color: var(--muted); white-space: nowrap; }
+
+        .row-btn {
+            font-family: var(--mono);
+            font-size: 10px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-2);
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            text-decoration: none;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+
+        .row-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-dim); }
+        .row-btn svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+        /* ── Footer ── */
+        .footer {
+            text-align: center;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .footer-text {
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--muted);
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .hero-grid  { grid-template-columns: 1fr; }
+            .topbar-meta { display: none; }
+            .filter-pills { display: none; }
+        }
+
+        /* Spinner Loader */
+        .spinner-loader {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left-color: var(--blue); /* This will use the new blue */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="layout">
+
+    <!-- Top Bar -->
+    <div class="topbar">
+        <div class="logo">
+            <div class="logo-icon">
+                <!-- trending-up icon -->
+                <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+            </div>
+            <div>
+                <div class="logo-name">MarketCapture</div>
+                <div class="logo-tag">Price Intelligence Engine</div>
+            </div>
+        </div>
+        <div class="topbar-right">
+            <span class="topbar-meta">V2.4 / CLOUD</span>
+            <div class="live-pill">
+                <div class="live-dot"></div>
+                LIVE
+            </div>
+        </div>
+    </div>
+
+    <!-- Search -->
+    <div class="search-wrap">
+        <div class="search-label">Scan target</div>
+        <form method="POST" class="search-row">
+            {% csrf_token %}
+            <input type="text" name="url" class="search-field" placeholder="https://amazon.com/dp/... or search keyword" required>
+            <select name="source" class="search-select">
+                <option value="all">All sources</option>
+                <option value="amazon">Amazon</option>
+                <option value="ebay">eBay</option>
+                <option value="walmart">Walmart</option>
+                <option value="bestbuy">Best Buy</option>
+            </select>
+            <button type="submit" class="btn-analyze">Analyze →</button>
+        </form>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loading-section" style="display: none; text-align: center; margin: 3rem 0;">
+        <div class="spinner-loader"></div>
+        <p style="font-family: var(--mono); color: var(--muted); font-size: 11px; letter-spacing: 0.08em; margin-top: 1rem;">ANALYZING MARKET DATA... PLEASE WAIT.</p>
+    </div>
+
+    {% if report %}
+
+    <!-- Alert Bar -->
+    {% if report.price_drop_alert %}
+    <div class="alert-bar" id="alertBar">
+        <span class="alert-icon">⚡️</span>
+        <span>Price drop detected — <strong>{{ report.price_drop_alert.name }}</strong> dropped {{ report.price_drop_alert.drop_pct }}% (now {{ report.price_drop_alert.current_price }} down from {{ report.price_drop_alert.original_price }}).</span>
+        <button class="alert-close" onclick="document.getElementById('alertBar').remove()">×</button>
+    </div>
+    {% endif %}
+
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-card s-blue">
+            <div class="stat-label">Products found</div>
+            <div class="stat-val">{{ report.stats.total_products }}</div>
+            <div class="stat-change neu">across {{ report.stats.source_count }} sources</div>
+        </div>
+        <div class="stat-card s-green">
+            <div class="stat-label">Lowest price</div>
+            <div class="stat-val">{{ report.cheapest.price_display }}</div>
+            <div class="stat-change up">▼ Best deal found</div>
+        </div>
+        <div class="stat-card s-amber">
+            <div class="stat-label">Price spread</div>
+            <div class="stat-val">{{ report.stats.spread_display }}</div>
+            <div class="stat-change neu">min → max range</div>
+        </div>
+        <div class="stat-card s-muted">
+            <div class="stat-label">Last scan</div>
+            <div class="stat-val" style="font-size:16px; margin-top:3px;">{{ report.stats.scan_time }}</div>
+            <div class="stat-change neu">Auto-refresh on</div>
+        </div>
+    </div>
+
+    <!-- Hero Cards -->
+    <div class="hero-section-label">Top picks</div>
+    <div class="hero-grid">
+
+        <div class="hero-card">
+            <div class="hero-card-top hc-green"></div>
+            <div class="hero-img-area">
+                {% if report.cheapest.image %}
+                    <img src="{{ report.cheapest.image }}" alt="{{ report.cheapest.name }}">
+                {% else %}
+                    <div class="hero-img-placeholder">
+                        <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="hero-body">
+                <div class="hero-badge badge-green">Cheapest Deal</div>
+                <div class="hero-name">{{ report.cheapest.name }}</div>
+                <div class="hero-price price-green">{{ report.cheapest.price_display }}</div>
+                <div class="hero-meta">
+                    <span>{{ report.cheapest.source }}</span>
+                    {% if report.cheapest.discount_pct > 0 %}
+                        <span style="color: var(--green); font-family: var(--mono); font-size: 10px;">▼ {{ report.cheapest.discount_pct }}% OFF</span>
+                    {% endif %}
+                </div>
+                <a href="{{ report.cheapest.url }}" target="_blank" class="btn-visit">
+                    <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    View Deal
+                </a>
+            </div>
+        </div>
+
+        {% if report.biggest_discount %}
+        <div class="hero-card">
+            <div class="hero-card-top hc-amber"></div>
+            <div class="hero-img-area">
+                {% if report.biggest_discount.image %}
+                    <img src="{{ report.biggest_discount.image }}" alt="{{ report.biggest_discount.name }}">
+                {% else %}
+                    <div class="hero-img-placeholder">
+                        <svg viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="hero-body">
+                <div class="hero-badge badge-amber">Biggest Discount</div>
+                <div class="hero-name">{{ report.biggest_discount.name }}</div>
+                <div class="hero-price price-amber">▼ {{ report.biggest_discount.discount_pct }}% OFF</div>
+                <div class="hero-meta">
+                    <span>{{ report.biggest_discount.source }}</span>
+                    <span style="font-size: 11px;"><span style="text-decoration: line-through; opacity: 0.7;">{{ report.biggest_discount.original_price }}</span> → {{ report.biggest_discount.price_display }}</span>
+                </div>
+                <a href="{{ report.biggest_discount.url }}" target="_blank" class="btn-visit">
+                    <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    View Deal
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <div class="hero-card">
+            <div class="hero-card-top hc-amber"></div>
+            <div class="hero-img-area"><div class="hero-img-placeholder"><svg viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg></div></div>
+            <div class="hero-body" style="justify-content: center; text-align: center;">
+                <div class="hero-badge badge-amber">No Major Deals</div>
+                <p style="font-size: 12px; color: var(--muted); margin-top: 10px;">We couldn't find any significant discounts in this scan.</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="hero-card">
+            <div class="hero-card-top hc-red"></div>
+            <div class="hero-img-area">
+                {% if report.expensive.image %}
+                    <img src="{{ report.expensive.image }}" alt="{{ report.expensive.name }}">
+                {% else %}
+                    <div class="hero-img-placeholder">
+                        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="hero-body">
+                <div class="hero-badge badge-red">Premium Pick</div>
+                <div class="hero-name">{{ report.expensive.name }}</div>
+                <div class="hero-price price-red">{{ report.expensive.price_display }}</div>
+                <div class="hero-meta">
+                    <span>{{ report.expensive.source }}</span>
+                    {% if report.expensive.discount_pct > 0 %}
+                        <span style="color: var(--green); font-family: var(--mono); font-size: 10px;">▼ {{ report.expensive.discount_pct }}% OFF</span>
+                    {% endif %}
+                </div>
+                <a href="{{ report.expensive.url }}" target="_blank" class="btn-visit">
+                    <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    View Product
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Table -->
+    <div class="table-section">
+        <div class="table-header">
+            <div class="table-title">All results ({{ report.all_products|length }})</div>
+            <div class="filter-pills">
+                <button class="filter-pill active" onclick="setFilter(this,'all')">All</button>
+                <button class="filter-pill" onclick="setFilter(this,'price')">Price ↑</button>
+                <button class="filter-pill" onclick="setFilter(this,'rating')">Rating</button>
+                <button class="filter-pill" onclick="setFilter(this,'deals')">Deals only</button>
+            </div>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Original Price</th>
+                        <th>Discount</th>
+                        <th style="text-align: right;">Live Price</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in report.all_products %}
+                    <tr>
+                        <td>
+                            <div class="product-cell">
+                                <div class="product-thumb">
+                                    {% if product.image %}
+                                        <img src="{{ product.image }}" alt="">
+                                    {% else %}
+                                        <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <div class="product-info-name">{{ product.name }}</div>
+                                    <div class="product-info-src">{{ product.source }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if product.original_price and product.original_price != product.price_numeric %}
+                                <span style="font-family: var(--mono); font-size:12px; text-decoration: line-through; color: var(--muted);">{{ product.original_price|floatformat:2 }}</span>
+                            {% else %}
+                                <span style="color: var(--muted); font-family: var(--mono); font-size:12px;">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if product.discount_pct > 0 %}
+                                <span class="trend-dn">▼ {{ product.discount_pct }}%</span>
+                            {% else %}
+                                <span style="color: var(--muted); font-family: var(--mono); font-size:12px;">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="price-col">{{ product.price_display }}</td>
+                        <td>
+                            <a href="{{ product.url }}" target="_blank" class="row-btn">
+                                <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                Visit
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% endif %}
+
+    <!-- Footer -->
+    <div class="footer">
+        <div class="footer-text">MarketCapture V2.4 &nbsp;/&nbsp; Price Intelligence Engine &nbsp;/&nbsp; Data refreshes every 5 min</div>
+    </div>
+
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const form = document.querySelector('form');
+        const loadingSection = document.getElementById('loading-section');
+        const submitBtn = form.querySelector('button[type="submit"]');
+
+        if (form) {
+            form.addEventListener('submit', function() {
+                // Hide existing report sections if they exist
+                const reportSections = document.querySelectorAll('.alert-bar, .stats-grid, .hero-section-label, .hero-grid, .table-section');
+                reportSections.forEach(sec => {
+                    if (sec) sec.style.display = 'none';
+                });
+
+                // Show the loading spinner
+                if (loadingSection) {
+                    loadingSection.style.display = 'block';
+                }
+                
+                // Disable the button
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'ANALYZING...';
+                }
+            });
+        }
+    });
+    // Filter pill interaction (wire to your backend / JS sort as needed)
+    function setFilter(el, type) {
+        document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+        el.classList.add('active');
+        // TODO: sort/filter tbody rows by type ('price', 'rating', 'deals', 'all')
+    }
+
+    // Sparkline chart rendering
+    document.querySelectorAll('.sparkline-container').forEach(el => {
+        const history = el.dataset.history.split(',').map(Number);
+        if(!history.length || isNaN(history[0])) return;
+        
+        const max = Math.max(...history);
+        const min = Math.min(...history);
+        const range = max - min || 1;
+        
+        const width = 70;
+        const height = 24;
+        
+        const points = history.map((val, i) => {
+            const x = (i / (history.length - 1)) * width;
+            const y = height - ((val - min) / range) * height;
+            return `${x},${y}`;
+        }).join(' ');
+
+        const start = history[0];
+        const end = history[history.length - 1];
+        const color = end < start ? 'var(--green)' : (end > start ? 'var(--red)' : 'var(--muted)');
+        
+        el.innerHTML = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="overflow:visible">
+            <polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>`;
+    });
+</script>
+
+</body>
+</html>
