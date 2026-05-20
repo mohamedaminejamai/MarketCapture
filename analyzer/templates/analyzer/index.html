@@ -481,28 +481,6 @@
             text-transform: uppercase;
         }
 
-        .filter-pills {
-            display: flex;
-            gap: 6px;
-            margin-left: auto;
-        }
-
-        .filter-pill {
-            font-family: var(--mono);
-            font-size: 10px;
-            padding: 4px 12px;
-            border-radius: 99px;
-            border: 1px solid var(--border-2);
-            background: transparent;
-            color: var(--muted);
-            cursor: pointer;
-            letter-spacing: 0.06em;
-            transition: all 0.15s;
-        }
-
-        .filter-pill:hover { border-color: var(--blue); color: var(--blue); }
-        .filter-pill.active { background: var(--blue-dim); border-color: var(--blue); color: var(--blue); }
-
         .table-wrap {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -555,8 +533,8 @@
         }
 
         .product-thumb {
-            width: 36px;
-            height: 36px;
+            width: 64px;
+            height: 64px;
             border-radius: 8px;
             background: var(--surface-2);
             border: 1px solid var(--border);
@@ -567,8 +545,8 @@
             overflow: hidden;
         }
 
-        .product-thumb img { width: 28px; height: 28px; object-fit: contain; }
-        .product-thumb svg { width: 16px; height: 16px; stroke: var(--muted); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; opacity: 0.5; }
+        .product-thumb img { width: 54px; height: 54px; object-fit: contain; }
+        .product-thumb svg { width: 28px; height: 28px; stroke: var(--muted); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; opacity: 0.5; }
 
         .product-info-name {
             font-size: 13px;
@@ -641,7 +619,6 @@
             .stats-grid { grid-template-columns: repeat(2, 1fr); }
             .hero-grid  { grid-template-columns: 1fr; }
             .topbar-meta { display: none; }
-            .filter-pills { display: none; }
         }
 
         /* Spinner Loader */
@@ -684,6 +661,15 @@
                 <div class="live-dot"></div>
                 LIVE
             </div>
+            {% if user.is_authenticated %}
+                <a href="{% url 'dashboard' %}" class="btn-visit" style="width: auto; padding: 4px 10px; margin-left: 10px;">Dashboard</a>
+                <form action="{% url 'logout' %}" method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-visit" style="width: auto; padding: 4px 10px; margin-left: 10px;">Logout ({{ user.username }})</button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}" class="btn-visit" style="width: auto; padding: 4px 10px; margin-left: 10px;">Login</a>
+            {% endif %}
         </div>
     </div>
 
@@ -692,14 +678,7 @@
         <div class="search-label">Scan target</div>
         <form method="POST" class="search-row">
             {% csrf_token %}
-            <input type="text" name="url" class="search-field" placeholder="https://amazon.com/dp/... or search keyword" required>
-            <select name="source" class="search-select">
-                <option value="all">All sources</option>
-                <option value="amazon">Amazon</option>
-                <option value="ebay">eBay</option>
-                <option value="walmart">Walmart</option>
-                <option value="bestbuy">Best Buy</option>
-            </select>
+            <input type="text" name="url" class="search-field" placeholder="Paste a link here" required>
             <button type="submit" class="btn-analyze">Analyze →</button>
         </form>
     </div>
@@ -707,8 +686,17 @@
     <!-- Loading Spinner -->
     <div id="loading-section" style="display: none; text-align: center; margin: 3rem 0;">
         <div class="spinner-loader"></div>
-        <p style="font-family: var(--mono); color: var(--muted); font-size: 11px; letter-spacing: 0.08em; margin-top: 1rem;">ANALYZING MARKET DATA... PLEASE WAIT.</p>
+        <p style="font-family: var(--mono); color: var(--muted); font-size: 11px; letter-spacing: 0.08em; margin-top: 1rem;">ANALYZING MARKET DATA & TRACKING PRICES... PLEASE WAIT.</p>
     </div>
+
+    {% if error %}
+    <!-- Error Alert Bar -->
+    <div class="alert-bar" id="errorBar" style="background: var(--red-dim); border-color: var(--red); color: var(--red);">
+        <span class="alert-icon">⚠️</span>
+        <span><strong>Scan Failed:</strong> {{ error }}</span>
+        <button class="alert-close" onclick="document.getElementById('errorBar').remove()">×</button>
+    </div>
+    {% endif %}
 
     {% if report %}
 
@@ -770,10 +758,23 @@
                         <span style="color: var(--green); font-family: var(--mono); font-size: 10px;">▼ {{ report.cheapest.discount_pct }}% OFF</span>
                     {% endif %}
                 </div>
-                <a href="{{ report.cheapest.url }}" target="_blank" class="btn-visit">
-                    <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                    View Deal
-                </a>
+                <div style="display: flex; gap: 8px; margin-top: auto;">
+                    <a href="{{ report.cheapest.url }}" target="_blank" class="btn-visit" style="flex: 1;">
+                        <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        View Deal
+                    </a>
+                    {% if user.is_authenticated %}
+                    <form action="{% url 'save_product' %}" method="post" style="flex: 1; display: flex;">
+                        {% csrf_token %}
+                        <input type="hidden" name="name" value="{{ report.cheapest.name }}">
+                        <input type="hidden" name="price" value="{{ report.cheapest.price_display }}">
+                        <input type="hidden" name="url" value="{{ report.cheapest.url }}">
+                        <input type="hidden" name="image" value="{{ report.cheapest.image|default:'' }}">
+                        <input type="hidden" name="source" value="{{ report.cheapest.source }}">
+                        <button type="submit" class="btn-visit" style="width: 100%;">Save</button>
+                    </form>
+                    {% endif %}
+                </div>
             </div>
         </div>
 
@@ -797,10 +798,23 @@
                     <span>{{ report.biggest_discount.source }}</span>
                     <span style="font-size: 11px;"><span style="text-decoration: line-through; opacity: 0.7;">{{ report.biggest_discount.original_price }}</span> → {{ report.biggest_discount.price_display }}</span>
                 </div>
-                <a href="{{ report.biggest_discount.url }}" target="_blank" class="btn-visit">
-                    <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                    View Deal
-                </a>
+                <div style="display: flex; gap: 8px; margin-top: auto;">
+                    <a href="{{ report.biggest_discount.url }}" target="_blank" class="btn-visit" style="flex: 1;">
+                        <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        View Deal
+                    </a>
+                    {% if user.is_authenticated %}
+                    <form action="{% url 'save_product' %}" method="post" style="flex: 1; display: flex;">
+                        {% csrf_token %}
+                        <input type="hidden" name="name" value="{{ report.biggest_discount.name }}">
+                        <input type="hidden" name="price" value="{{ report.biggest_discount.price_display }}">
+                        <input type="hidden" name="url" value="{{ report.biggest_discount.url }}">
+                        <input type="hidden" name="image" value="{{ report.biggest_discount.image|default:'' }}">
+                        <input type="hidden" name="source" value="{{ report.biggest_discount.source }}">
+                        <button type="submit" class="btn-visit" style="width: 100%;">Save</button>
+                    </form>
+                    {% endif %}
+                </div>
             </div>
         </div>
         {% else %}
@@ -835,10 +849,23 @@
                         <span style="color: var(--green); font-family: var(--mono); font-size: 10px;">▼ {{ report.expensive.discount_pct }}% OFF</span>
                     {% endif %}
                 </div>
-                <a href="{{ report.expensive.url }}" target="_blank" class="btn-visit">
-                    <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                    View Product
-                </a>
+                <div style="display: flex; gap: 8px; margin-top: auto;">
+                    <a href="{{ report.expensive.url }}" target="_blank" class="btn-visit" style="flex: 1;">
+                        <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        View Product
+                    </a>
+                    {% if user.is_authenticated %}
+                    <form action="{% url 'save_product' %}" method="post" style="flex: 1; display: flex;">
+                        {% csrf_token %}
+                        <input type="hidden" name="name" value="{{ report.expensive.name }}">
+                        <input type="hidden" name="price" value="{{ report.expensive.price_display }}">
+                        <input type="hidden" name="url" value="{{ report.expensive.url }}">
+                        <input type="hidden" name="image" value="{{ report.expensive.image|default:'' }}">
+                        <input type="hidden" name="source" value="{{ report.expensive.source }}">
+                        <button type="submit" class="btn-visit" style="width: 100%;">Save</button>
+                    </form>
+                    {% endif %}
+                </div>
             </div>
         </div>
 
@@ -848,12 +875,6 @@
     <div class="table-section">
         <div class="table-header">
             <div class="table-title">All results ({{ report.all_products|length }})</div>
-            <div class="filter-pills">
-                <button class="filter-pill active" onclick="setFilter(this,'all')">All</button>
-                <button class="filter-pill" onclick="setFilter(this,'price')">Price ↑</button>
-                <button class="filter-pill" onclick="setFilter(this,'rating')">Rating</button>
-                <button class="filter-pill" onclick="setFilter(this,'deals')">Deals only</button>
-            </div>
         </div>
         <div class="table-wrap">
             <table>
@@ -900,10 +921,25 @@
                         </td>
                         <td class="price-col">{{ product.price_display }}</td>
                         <td>
-                            <a href="{{ product.url }}" target="_blank" class="row-btn">
-                                <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                                Visit
-                            </a>
+                            <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                                <a href="{{ product.url }}" target="_blank" class="row-btn">
+                                    <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                    Visit
+                                </a>
+                                {% if user.is_authenticated %}
+                                <form action="{% url 'save_product' %}" method="post" style="margin: 0;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="name" value="{{ product.name }}">
+                                    <input type="hidden" name="price" value="{{ product.price_display }}">
+                                    <input type="hidden" name="url" value="{{ product.url }}">
+                                    <input type="hidden" name="image" value="{{ product.image|default:'' }}">
+                                    <input type="hidden" name="source" value="{{ product.source }}">
+                                    <button type="submit" class="row-btn" title="Save Product">
+                                        <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -923,7 +959,7 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        const form = document.querySelector('form');
+        const form = document.querySelector('form.search-row');
         const loadingSection = document.getElementById('loading-section');
         const submitBtn = form.querySelector('button[type="submit"]');
 
@@ -948,13 +984,6 @@
             });
         }
     });
-    // Filter pill interaction (wire to your backend / JS sort as needed)
-    function setFilter(el, type) {
-        document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
-        el.classList.add('active');
-        // TODO: sort/filter tbody rows by type ('price', 'rating', 'deals', 'all')
-    }
-
     // Sparkline chart rendering
     document.querySelectorAll('.sparkline-container').forEach(el => {
         const history = el.dataset.history.split(',').map(Number);

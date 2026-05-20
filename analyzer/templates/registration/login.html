@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarketCapture | Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg:        #f4f6f8;
+            --surface:   #ffffff;
+            --border:    #e9ecef;
+            --border-2:  #d1d7de;
+            --text:      #212529;
+            --muted:     #6c757d;
+            --blue:      #3E7BCC;
+            --blue-dim:  rgba(62, 123, 204, 0.15);
+            --mono: 'Space Mono', monospace;
+            --sans: 'DM Sans', sans-serif;
+        }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--sans);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+        }
+        .login-card {
+            background: var(--surface);
+            padding: 2.5rem 2rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        
+        .logo { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 2rem; }
+        .logo-icon {
+            width: 36px; height: 36px; background: var(--blue); border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .logo-icon svg { width: 18px; height: 18px; stroke: white; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .logo-name { font-family: var(--sans); font-size: 16px; font-weight: 700; letter-spacing: 0.01em; text-align: left; }
+        .logo-tag { font-family: var(--sans); font-size: 9px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; text-align: left; }
+        
+        .login-card p { margin-bottom: 15px; }
+        .login-card label {
+            font-family: var(--mono); font-size: 10px; color: var(--muted);
+            letter-spacing: 0.12em; text-transform: uppercase; display: block; margin-bottom: 6px;
+        }
+        .login-card input {
+            width: 100%; height: 44px; padding: 0 16px; background: var(--surface);
+            border: 1px solid var(--border-2); border-radius: 8px; color: var(--text);
+            font-family: var(--mono); font-size: 12px; outline: none; box-sizing: border-box;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .login-card input:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px var(--blue-dim);
+        }
+        .btn-primary {
+            background: var(--blue);
+            border: none;
+            width: 100%;
+            height: 44px;
+            border-radius: 8px;
+            color: #fff;
+            font-family: var(--mono);
+            text-transform: uppercase;
+            font-weight: 700;
+            font-size: 11px;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            margin-top: 10px;
+        }
+        .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+        .btn-primary:active { transform: translateY(0); }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="logo">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+            </div>
+            <div>
+                <div class="logo-name">MarketCapture</div>
+                <div class="logo-tag">Welcome Back</div>
+            </div>
+        </div>
+        {% if form.errors %}
+            <div style="background: rgba(217, 55, 68, 0.15); border: 1px solid rgba(255,79,94,0.2); color: #d93744; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; text-align: center;">
+                Invalid username or password. Please try again.
+            </div>
+        {% endif %}
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-primary">Login</button>
+            {% if next %}
+                <input type="hidden" name="next" value="{{ next }}">
+            {% endif %}
+        </form>
+        <p style="margin-top: 15px; text-align: center; font-size: 13px;">
+            Don't have an account? <a href="{% url 'register' %}" style="color: var(--blue); text-decoration: none;">Sign up here</a>
+        </p>
+    </div>
+</body>
+</html>

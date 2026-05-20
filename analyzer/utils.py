@@ -5,6 +5,7 @@ import re
 import json
 from urllib.parse import urljoin, urlparse, quote
 from datetime import datetime
+from playwright_stealth import Stealth
 
 def get_price_from_offers(offers):
     """Helper to safely extract price details from a JSON-LD offer object."""
@@ -80,6 +81,12 @@ def _parse_price(price_str):
     
     text = str(price_str)
 
+    # 1. Keep only digits, dots, commas, and spaces
+    text = re.sub(r'[^\d.,\s]', '', text).strip()
+    
+    # 2. Remove spaces (often used as thousands separators like "10 590,00")
+    text = re.sub(r'\s+', '', text)
+
     # Handle formats like "1.234,56" (German) vs "1,234.56" (US)
     if ',' in text and '.' in text:
         # If comma is the last separator, it's the decimal
@@ -88,12 +95,28 @@ def _parse_price(price_str):
         else:
             # If dot is the last, it's the decimal
             text = text.replace(',', '')
-    else:
-        # If only one separator type, assume it's a decimal
-        text = text.replace(',', '.')
+    elif ',' in text:
+        # Only commas exist
+        if text.count(',') > 1:
+            text = text.replace(',', '') # thousands separators
+        else:
+            parts = text.split(',')
+            if len(parts[-1]) in [1, 2]:
+                text = text.replace(',', '.') # likely decimal "19,99"
+            else:
+                text = text.replace(',', '') # likely thousands "1,000"
+    elif '.' in text:
+        if text.count('.') > 1:
+            text = text.replace('.', '') # multiple dots -> thousands separators "1.000.000"
 
     # Remove all non-numeric characters except for the decimal point
     text = re.sub(r'[^\d.]', '', text)
+    text = text.strip('.')
+    
+    # Ensure only one decimal point exists
+    if text.count('.') > 1:
+        parts = text.split('.')
+        text = ''.join(parts[:-1]) + '.' + parts[-1]
     
     try:
         return float(text)
@@ -106,7 +129,8 @@ def scrape_market_data(url):
         url = f"https://www.ebay.com/sch/i.html?_nkw={quote(url)}"
 
     try:
-        with sync_playwright() as p:
+        # Wrap sync_playwright() with Stealth to automatically apply patches
+        with Stealth().use_sync(sync_playwright()) as p:
             browser = p.chromium.launch(
                 headless=True,
                 args=["--no-sandbox", "--disable-blink-features=AutomationControlled"]
@@ -168,19 +192,72 @@ def scrape_market_data(url):
                     numeric_price, original_price, raw_price_display = None, None, None
                     item_soup = BeautifulSoup(str(item), 'html.parser') # Work on a copy to safely modify it
 
-                    # --- Step 1: Find original price (strikethrough) and remove it ---
-                    original_price_tag = item_soup.find(['del', 's'], text=re.compile(r'\d'))
-                    if original_price_tag:
-                        original_price = _parse_price(original_price_tag.get_text())
-                        original_price_tag.decompose()
+                    # --- Step 1: Find original price (strikethrough or old price classes) and remove it ---
+                    del_tags = item_soup.find_all(['del', 's'])
+                    # Added 'list-price' and 'base-price' to catch even more variations
+                    old_price_tags = item_soup.find_all(class_=re.compile(r'old[\-_]?price|regular[\-_]?price|strike|was[\-_]?price|original[\-_]?price|list[\-_]?price|base[\-_]?price', re.I))
+                    
+                    for tag in set(del_tags + old_price_tags):
+                        try:
+                            val = _parse_price(tag.get_text())
+                            if val and (not original_price or val > original_price):
+                                original_price = val
+                            tag.decompose()
+                        except Exception:
+                            pass
 
                     # --- Step 2: Find current price in the remaining HTML ---
-                    price_area = item_soup.find(class_=re.compile(r'price', re.I)) or item_soup
-                    price_match = re.search(r'((?:[\$€£]|USD|EUR|Dhs|MAD)\s?\d[\d,.]*)|(\d[\d,.]*\s?(?:Dhs|MAD|DH))', price_area.get_text(separator=' '))
+                    # We make the regex much more robust by looking for common currency identifiers first.
+                    currency_pattern = r'[\$€£]|USD|EUR|Dhs?|MAD|DH|dollars?|euros?'
+                    price_regex = re.compile(rf'(?:(?:{currency_pattern})\s*\d+(?:[\s.,]\d+)*)|(?:\d+(?:[\s.,]\d+)*\s*(?:{currency_pattern}))', re.IGNORECASE)
+                    
+                    full_text = item_soup.get_text(separator=' ')
+                    matches = list(re.finditer(price_regex, full_text))
 
-                    if price_match:
-                        raw_price_display = price_match.group(0).strip()
-                        numeric_price = _parse_price(raw_price_display)
+                    if matches:
+                        valid_prices = []
+                        for m in matches:
+                            # Look at context before the price to weed out "deals", "save", or negative numbers
+                            start_idx = m.start()
+                            prefix_context = full_text[max(0, start_idx - 20):start_idx].lower()
+                            
+                            if re.search(r'\b(?:save|discount|deals?|off|économisez|remise)\b[^\d]*$', prefix_context) or prefix_context.endswith('-'):
+                                continue
+
+                            raw_str = m.group(0).strip()
+                            val = _parse_price(raw_str)
+                            if val and val >= 1.0:
+                                valid_prices.append((val, raw_str))
+                                
+                        if valid_prices:
+                            # Pick the highest remaining price to avoid capturing small shipping/installment fees
+                            valid_prices.sort(key=lambda x: x[0], reverse=True)
+                            numeric_price = valid_prices[0][0]
+                            raw_price_display = valid_prices[0][1]
+                    
+                    if not numeric_price:
+                        # Fallback if no currency symbol was explicitly found but there's a price container
+                        price_area = item_soup.find(class_=re.compile(r'price', re.I))
+                        if price_area:
+                            area_text = price_area.get_text(separator=' ')
+                            fb_matches = list(re.finditer(r'\d+(?:[\s.,]\d+)*', area_text))
+                            if fb_matches:
+                                fb_valid = []
+                                for fm in fb_matches:
+                                    start_idx = fm.start()
+                                    prefix_context = area_text[max(0, start_idx - 20):start_idx].lower()
+                                    
+                                    if re.search(r'\b(?:save|discount|deals?|off|économisez|remise)\b[^\d]*$', prefix_context) or prefix_context.endswith('-'):
+                                        continue
+                                    
+                                    val = _parse_price(fm.group(0).strip())
+                                    if val and val >= 1.0:
+                                        fb_valid.append((val, f"${fm.group(0).strip()}"))
+                                        
+                                if fb_valid:
+                                    fb_valid.sort(key=lambda x: x[0], reverse=True)
+                                    numeric_price = fb_valid[0][0]
+                                    raw_price_display = fb_valid[0][1]
 
                     # --- Step 3: Validation and Finalization ---
                     if not numeric_price or numeric_price < 1.0:
